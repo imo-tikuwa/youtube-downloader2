@@ -1,0 +1,7 @@
+click==7.1.2
+colorama==0.4.3
+ffmpeg-python==0.2.0
+future==0.18.2
+logzero==1.5.0
+pytube3==9.6.4
+typing-extensions==3.7.4.2
