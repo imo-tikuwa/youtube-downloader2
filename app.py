@@ -8,6 +8,7 @@ from pytube import YouTube
 import os
 import ffmpeg
 import re
+import eyed3
 
 DOWNLOAD_DIR = 'downloaded/'
 LOG_DIR = 'log' + os.sep
@@ -57,6 +58,23 @@ def main(youtube_id, debug, convert_mp3):
             logger.debug(type(ffmpeg_stream))
             ffmpeg_stream = ffmpeg.output(ffmpeg_stream, DOWNLOAD_DIR + mp3_file_name)
             ffmpeg.run(ffmpeg_stream, overwrite_output=True)
+
+            logger.info("動画からサムネイルを生成してMP3のID3タグに設定")
+            try:
+                thumb_file_name = mp4_file_name.replace('.mp4', '.png')
+                ffmpeg.input(DOWNLOAD_DIR + mp4_file_name, ss=1).output(DOWNLOAD_DIR + thumb_file_name, vframes=1).run(overwrite_output=True)
+                logger.info("サムネイル生成に成功")
+
+                mp3_id3 = eyed3.load(DOWNLOAD_DIR + mp3_file_name)
+                mp3_id3.initTag()
+                mp3_id3.tag.title = stream.title
+                mp3_id3.tag.images.set(eyed3.id3.frames.ImageFrame.FRONT_COVER, open(DOWNLOAD_DIR + thumb_file_name, 'rb').read(), 'image/png')
+                logger.debug(mp3_id3)
+                mp3_id3.tag.save(encoding='utf-8', version=eyed3.id3.ID3_V2_3)
+                logger.info("サムネイルの設定に成功")
+            except:
+                logger.error("サムネイルの設定に失敗")
+
             logger.info("MP3の作成に成功しました。")
         except:
             logger.error("MP3の作成に失敗しました。")
