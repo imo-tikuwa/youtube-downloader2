@@ -9,16 +9,34 @@ import os
 import ffmpeg
 import re
 import eyed3
+import shutil
+import configparser
+import tkinter, tkinter.filedialog
 
 DOWNLOAD_DIR = 'downloaded/'
 LOG_DIR = 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
+CONFIG_FILE_NAME = 'settings.ini'
+CONFIG_DEFAULT_SECTION = 'default'
+CONFIG_FFMPEG_DIR = 'ffmpeg_dir'
 
 # ログファイル
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 logzero.logfile(LOG_FILE, encoding = "utf-8")
 logzero.loglevel(logging.INFO)
+
+# 設定ファイル
+config = configparser.ConfigParser()
+config.read(CONFIG_FILE_NAME, 'cp932')
+if not config.has_section(CONFIG_DEFAULT_SECTION):
+    config.add_section(CONFIG_DEFAULT_SECTION)
+    config.write(open(CONFIG_FILE_NAME, 'w'))
+if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR) and not os.path.exists(config.get(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR) + os.sep + 'ffmpeg.exe'):
+    logger.warning("設定ファイルに保管されているffmpegのディレクトリパスが存在しないため設定を削除します")
+    config.remove_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
+    config.write(open(CONFIG_FILE_NAME, 'w'))
+
 
 @click.command()
 @click.option('--youtube-id', '-yid', required = True, help = 'youtubeの動画ID(必須)')
@@ -28,7 +46,28 @@ def main(youtube_id, debug, convert_mp3):
 
     if debug:
         logzero.loglevel(logging.DEBUG)
-        logger.debug("youtube_id:{0}".format(youtube_id))
+
+    # ffmpegコマンドのチェック
+    if convert_mp3 and not shutil.which('ffmpeg'):
+        logger.info("MP3への変換にはffmpegのインストールが必要です。")
+
+        if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR):
+            ffmpeg_dir = config.get(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
+        else:
+            logger.info("ffmpegがインストールされているディレクトリを指定してください")
+            tkinter.Tk().withdraw()
+            ffmpeg_dir = tkinter.filedialog.askdirectory(initialdir = os.getcwd())
+            if ffmpeg_dir == '' or not os.path.exists(ffmpeg_dir + os.sep + 'ffmpeg.exe'):
+                logger.error("パスが不正です")
+                sys.exit(1)
+            config.set(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR, ffmpeg_dir)
+            config.write(open(CONFIG_FILE_NAME, 'w'))
+
+        os.environ['Path'] += ";{0}".format(ffmpeg_dir)
+        logger.debug(os.environ['Path'])
+        if not shutil.which('ffmpeg'):
+            logger.error("ffmpegの参照が解決できませんでした")
+            sys.exit(1)
 
     try:
         yt = YouTube('https://www.youtube.com/watch?v=' + youtube_id)
@@ -55,7 +94,6 @@ def main(youtube_id, debug, convert_mp3):
         try:
             ffmpeg_stream = ffmpeg.input(DOWNLOAD_DIR + mp4_file_name)
             logger.debug(ffmpeg_stream)
-            logger.debug(type(ffmpeg_stream))
             ffmpeg_stream = ffmpeg.output(ffmpeg_stream, DOWNLOAD_DIR + mp3_file_name)
             ffmpeg.run(ffmpeg_stream, overwrite_output=True)
 
