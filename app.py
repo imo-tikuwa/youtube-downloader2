@@ -49,12 +49,12 @@ def main(youtube_id, debug, convert_mp3):
 
     # ffmpegコマンドのチェック
     if convert_mp3 and not shutil.which('ffmpeg'):
-        logger.info("MP3への変換にはffmpegのインストールが必要です。")
+        logger.debug("ffmpegのパスが通ってませんでした")
 
         if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR):
             ffmpeg_dir = config.get(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
         else:
-            logger.info("ffmpegがインストールされているディレクトリを指定してください")
+            logger.info("MP3への変換にはffmpegのインストールが必要です。ffmpegがインストールされているディレクトリを指定してください")
             tkinter.Tk().withdraw()
             ffmpeg_dir = tkinter.filedialog.askdirectory(initialdir = os.getcwd())
             if ffmpeg_dir == '' or not os.path.exists(ffmpeg_dir + os.sep + 'ffmpeg.exe'):
@@ -85,7 +85,7 @@ def main(youtube_id, debug, convert_mp3):
     stream.download(DOWNLOAD_DIR, stream.title)
     logger.info("動画の保存に成功しました。")
     # ファイル名として使えない文字を除いた文字列を作成
-    stream_title = re.sub(r'[\\/:*?"<>|]+', '', stream.title)
+    stream_title = re.sub(r'[\\/:*?"<>|~]+', '', stream.title)
     mp4_file_name = stream_title + '.mp4'
 
     if convert_mp3:
