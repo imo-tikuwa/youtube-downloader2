@@ -1,5 +1,6 @@
 click==7.1.2
 colorama==0.4.3
+configparser==5.0.0
 deprecation==2.1.0
 eyeD3==0.9.5
 ffmpeg-python==0.2.0
