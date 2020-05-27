@@ -5,7 +5,7 @@
 python -m venv venv
 .\venv\Scripts\activate.bat
 pip install -r requirements.txt
-app.py -yid [youtube id] --debug --convert-mp3
+app.py -yid [youtube id] --debug --convert-mp3 --thumb-second 60
 ```
 
 ## オプション
