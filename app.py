@@ -19,7 +19,7 @@ DOWNLOAD_DIR = BASE_DIR + os.sep + 'downloaded' + os.sep
 DOWNLOADED_LOG_FILE = DOWNLOAD_DIR + '.json'
 LOG_DIR = BASE_DIR + os.sep + 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
-CONFIG_FILE_NAME = 'settings.ini'
+CONFIG_FILE_NAME = BASE_DIR + os.sep + 'settings.ini'
 CONFIG_DEFAULT_SECTION = 'default'
 CONFIG_FFMPEG_DIR = 'ffmpeg_dir'
 
@@ -76,7 +76,8 @@ def download_youtube_movie(youtube_id):
 @click.option('--debug', is_flag = True, help = "debugログを出力します")
 @click.option('--convert-mp3', is_flag = True, help = "mp3に変換して出力します")
 @click.option('--thumb-second', required = False, help = 'サムネイル作成対象とする秒数を指定', type = int, default = 1)
-def main(youtube_id, debug, convert_mp3, thumb_second):
+@click.option('--force', is_flag = True, help = "ダウンロードディレクトリにMP4やMP3が存在する場合に未確認で上書きします")
+def main(youtube_id, debug, convert_mp3, thumb_second, force):
 
     if debug:
         logzero.loglevel(logging.DEBUG)
@@ -106,7 +107,7 @@ def main(youtube_id, debug, convert_mp3, thumb_second):
             sys.exit(1)
 
     download_flag = True
-    if youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp4'):
+    if not force and youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp4'):
         print('入力した動画IDの動画は既にダウンロード済みのようです。再度ダウンロードしますか？[y/N]')
         if input() not in ['Y', 'y']:
             download_flag = False
@@ -124,7 +125,7 @@ def main(youtube_id, debug, convert_mp3, thumb_second):
         stream_title = downloaded_dict[youtube_id]
 
     if convert_mp3:
-        if youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp3'):
+        if not force and youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp3'):
             print('ダウンロードした動画に対応するMP3が既に存在します。再度作成しますか？[y/N]')
             if input() not in ['Y', 'y']:
                 logger.info("MP3の作成をやめたためプログラムを終了します。")
