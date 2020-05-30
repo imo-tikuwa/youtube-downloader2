@@ -128,6 +128,39 @@ def get_stream_title_by_download_history(youtube_id):
     return downloaded_dict[youtube_id]
 
 
+def convert_mp4_to_mp3(stream_title, thumb_second):
+    """
+    MP4形式の動画をffmpegを使用してMP3に変換する
+    第2引数の秒を元にアルバムアートとして設定する画像を動画から切り出してID3タグに設定する
+    """
+    # 動画の変換、アルバムアートの設定に失敗したらFalse
+    convert_result = True
+    try:
+        ffmpeg_stream = ffmpeg.input(DOWNLOAD_DIR + stream_title + '.mp4')
+        ffmpeg_stream = ffmpeg.output(ffmpeg_stream, DOWNLOAD_DIR + stream_title + '.mp3')
+        ffmpeg.run(ffmpeg_stream, overwrite_output=True, quiet=True)
+
+        logger.info("動画からサムネイルを生成してMP3のID3タグに設定")
+        try:
+            ffmpeg.input(DOWNLOAD_DIR + stream_title + '.mp4', ss=1).output(DOWNLOAD_DIR + stream_title + '.png', vframes=1, ss=thumb_second).run(overwrite_output=True, quiet=True)
+            logger.info("サムネイル生成に成功")
+
+            mp3_id3 = eyed3.load(DOWNLOAD_DIR + stream_title + '.mp3')
+            mp3_id3.initTag()
+            mp3_id3.tag.title = stream_title
+            mp3_id3.tag.images.set(eyed3.id3.frames.ImageFrame.FRONT_COVER, open(DOWNLOAD_DIR + stream_title + '.png', 'rb').read(), 'image/png')
+            mp3_id3.tag.save(encoding='utf-8', version=eyed3.id3.ID3_V2_3)
+            logger.info("サムネイルの設定に成功")
+        except:
+            convert_result = False
+            logger.error("サムネイルの設定に失敗")
+        logger.info("MP3の作成に成功しました。")
+    except:
+        convert_result = False
+        logger.error("MP3の作成に失敗しました。")
+    return convert_result
+
+
 @click.command()
 @click.option('--youtube-id', '-yid', required = True, help = 'youtubeの動画ID(必須)')
 @click.option('--debug', is_flag = True, help = "debugログを出力します")
@@ -176,28 +209,9 @@ def main(youtube_id, debug, convert_mp3, thumb_second, force):
                 sys.exit(0)
 
         logger.info("動画をMP3に変換します。ファイル名：{0}".format(stream_title + '.mp3'))
-        try:
-            ffmpeg_stream = ffmpeg.input(DOWNLOAD_DIR + stream_title + '.mp4')
-            ffmpeg_stream = ffmpeg.output(ffmpeg_stream, DOWNLOAD_DIR + stream_title + '.mp3')
-            ffmpeg.run(ffmpeg_stream, overwrite_output=True, quiet=True)
-
-            logger.info("動画からサムネイルを生成してMP3のID3タグに設定")
-            try:
-                ffmpeg.input(DOWNLOAD_DIR + stream_title + '.mp4', ss=1).output(DOWNLOAD_DIR + stream_title + '.png', vframes=1, ss=thumb_second).run(overwrite_output=True, quiet=True)
-                logger.info("サムネイル生成に成功")
-
-                mp3_id3 = eyed3.load(DOWNLOAD_DIR + stream_title + '.mp3')
-                mp3_id3.initTag()
-                mp3_id3.tag.title = stream_title
-                mp3_id3.tag.images.set(eyed3.id3.frames.ImageFrame.FRONT_COVER, open(DOWNLOAD_DIR + stream_title + '.png', 'rb').read(), 'image/png')
-                mp3_id3.tag.save(encoding='utf-8', version=eyed3.id3.ID3_V2_3)
-                logger.info("サムネイルの設定に成功")
-            except:
-                logger.error("サムネイルの設定に失敗")
-
-            logger.info("MP3の作成に成功しました。")
-        except:
-            logger.error("MP3の作成に失敗しました。")
+        convert_result = convert_mp4_to_mp3(stream_title, thumb_second)
+        if not convert_result:
+            logger.error("動画のMP3変換に失敗したためプログラムを終了します。")
             sys.exit(1)
 
 if __name__ == "__main__":
