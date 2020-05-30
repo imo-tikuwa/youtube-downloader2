@@ -69,6 +69,7 @@ def check_ffmpeg():
     ffmpegが使用可能かチェックする
     パスが通ってない場合はsettings.iniを参照して解決する
     settings.iniに設定が存在しない場合はディレクトリ選択のダイアログを開いて指定してもらう
+    パス設定なんかで何か間違った時はFalseを返す
     """
     logger.info('ffmpegが利用可能かチェックします')
     if not shutil.which('ffmpeg'):
@@ -82,7 +83,7 @@ def check_ffmpeg():
             ffmpeg_dir = tkinter.filedialog.askdirectory(initialdir = os.getcwd())
             if ffmpeg_dir == '' or not os.path.exists(ffmpeg_dir + os.sep + 'ffmpeg.exe'):
                 logger.error("パスが不正です")
-                sys.exit(1)
+                return False
             config.set(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR, ffmpeg_dir)
             config.write(open(CONFIG_FILE_NAME, 'w'))
 
@@ -90,9 +91,10 @@ def check_ffmpeg():
         logger.debug(os.environ['Path'])
         if not shutil.which('ffmpeg'):
             logger.error("ffmpegの参照が解決できませんでした")
-            sys.exit(1)
+            return False
         logger.debug('ffmpegのパスを解決しました')
     logger.info('ffmpegが利用可能です')
+    return True
 
 
 def is_exist_movie(youtube_id):
@@ -181,7 +183,10 @@ def main(youtube_id, debug, convert_mp3, thumb_second, force):
 
     # ffmpegコマンドのチェック
     if convert_mp3:
-        check_ffmpeg()
+        check_result = check_ffmpeg()
+        if not check_result:
+            logger.error('ffmpegのチェックに失敗したためプログラムを終了します。')
+            sys.exit(1)
 
     download_flag = True
     if not force and is_exist_movie(youtube_id):
