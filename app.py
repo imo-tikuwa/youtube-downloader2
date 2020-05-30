@@ -14,9 +14,10 @@ import configparser
 import tkinter, tkinter.filedialog
 import json
 
-DOWNLOAD_DIR = 'downloaded' + os.sep
+BASE_DIR = os.path.dirname(__file__)
+DOWNLOAD_DIR = BASE_DIR + os.sep + 'downloaded' + os.sep
 DOWNLOADED_LOG_FILE = DOWNLOAD_DIR + '.json'
-LOG_DIR = 'log' + os.sep
+LOG_DIR = BASE_DIR + os.sep + 'log' + os.sep
 LOG_FILE = LOG_DIR + 'application.log'
 CONFIG_FILE_NAME = 'settings.ini'
 CONFIG_DEFAULT_SECTION = 'default'
@@ -65,7 +66,7 @@ def download_youtube_movie(youtube_id):
     stream.download(DOWNLOAD_DIR, stream.title)
     logger.info("動画の保存に成功しました。")
     # ファイル名として使えない文字を除いた文字列を作成
-    stream_title = re.sub(r'[\\/:*?"<>|~]+', '', stream.title)
+    stream_title = re.sub(r'[\\/:*?"<>|~.]+', '', stream.title)
 
     return True, stream_title
 
