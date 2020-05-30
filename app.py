@@ -23,12 +23,6 @@ CONFIG_FILE_NAME = BASE_DIR + os.sep + 'settings.ini'
 CONFIG_DEFAULT_SECTION = 'default'
 CONFIG_FFMPEG_DIR = 'ffmpeg_dir'
 
-# ログファイル
-if not os.path.exists(LOG_DIR):
-    os.makedirs(LOG_DIR)
-logzero.logfile(LOG_FILE, encoding = "utf-8")
-logzero.loglevel(logging.INFO)
-
 # 設定ファイル
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE_NAME, 'cp932')
@@ -40,10 +34,9 @@ if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR) and not os.path.
     config.remove_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
     config.write(open(CONFIG_FILE_NAME, 'w'))
 
-# ダウンロード済みファイルの辞書
+# ダウンロード済みファイルの辞書がなければ作成
 if not os.path.exists(DOWNLOADED_LOG_FILE):
     json.dump({}, open(DOWNLOADED_LOG_FILE, 'w'), indent=4)
-downloaded_dict = json.load(open(DOWNLOADED_LOG_FILE, encoding='unicode-escape'))
 
 
 def download_youtube_movie(youtube_id):
@@ -71,25 +64,18 @@ def download_youtube_movie(youtube_id):
     return True, stream_title
 
 
-@click.command()
-@click.option('--youtube-id', '-yid', required = True, help = 'youtubeの動画ID(必須)')
-@click.option('--debug', is_flag = True, help = "debugログを出力します")
-@click.option('--convert-mp3', is_flag = True, help = "mp3に変換して出力します")
-@click.option('--thumb-second', required = False, help = 'サムネイル作成対象とする秒数を指定', type = int, default = 1)
-@click.option('--force', is_flag = True, help = "ダウンロードディレクトリにMP4やMP3が存在する場合に未確認で上書きします")
-def main(youtube_id, debug, convert_mp3, thumb_second, force):
-
-    if debug:
-        logzero.loglevel(logging.DEBUG)
-        logger.debug("youtube_id:{0}".format(youtube_id))
-
-    # ffmpegコマンドのチェック
-    if convert_mp3 and not shutil.which('ffmpeg'):
+def check_ffmpeg():
+    """
+    ffmpegが使用可能かチェックする
+    パスが通ってない場合はsettings.iniを参照して解決する
+    settings.iniに設定が存在しない場合はディレクトリ選択のダイアログを開いて指定してもらう
+    """
+    logger.info('ffmpegが利用可能かチェックします')
+    if not shutil.which('ffmpeg'):
         logger.debug("ffmpegのパスが通ってませんでした")
-
         if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR):
             ffmpeg_dir = config.get(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
-            logger.info("{0}からffmpegのインストールディレクトリを取得しました".format(CONFIG_FILE_NAME))
+            logger.debug("{0}からffmpegのインストールディレクトリを取得しました".format(CONFIG_FILE_NAME))
         else:
             logger.info("MP3への変換にはffmpegのインストールが必要です。ffmpegがインストールされているディレクトリを指定してください")
             tkinter.Tk().withdraw()
@@ -105,9 +91,67 @@ def main(youtube_id, debug, convert_mp3, thumb_second, force):
         if not shutil.which('ffmpeg'):
             logger.error("ffmpegの参照が解決できませんでした")
             sys.exit(1)
+        logger.debug('ffmpegのパスを解決しました')
+    logger.info('ffmpegが利用可能です')
+
+
+def is_exist_movie(youtube_id):
+    """
+    動画がダウンロード済みかどうかを（ファイルパスが解決できるかを含めて）判定する
+    """
+    downloaded_dict = json.load(open(DOWNLOADED_LOG_FILE, encoding='unicode-escape'))
+    return youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp4')
+
+
+def is_exist_mp3(youtube_id):
+    """
+    引数の動画IDに対応するMP3が存在するか判定する
+    """
+    downloaded_dict = json.load(open(DOWNLOADED_LOG_FILE, encoding='unicode-escape'))
+    return youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp3')
+
+
+def add_download_history(youtube_id, stream_title):
+    """
+    ダウンロード履歴のファイル（downloaded/.json）を更新する
+    """
+    downloaded_dict = json.load(open(DOWNLOADED_LOG_FILE, encoding='unicode-escape'))
+    downloaded_dict[youtube_id] = stream_title
+    json.dump(downloaded_dict, open(DOWNLOADED_LOG_FILE, 'w'), indent=4)
+
+
+def get_stream_title_by_download_history(youtube_id):
+    """
+    ダウンロード履歴のファイル（downloaded/.json）から動画タイトルを取得する
+    """
+    downloaded_dict = json.load(open(DOWNLOADED_LOG_FILE, encoding='unicode-escape'))
+    return downloaded_dict[youtube_id]
+
+
+@click.command()
+@click.option('--youtube-id', '-yid', required = True, help = 'youtubeの動画ID(必須)')
+@click.option('--debug', is_flag = True, help = "debugログを出力します")
+@click.option('--convert-mp3', is_flag = True, help = "mp3に変換して出力します")
+@click.option('--thumb-second', required = False, help = 'サムネイル作成対象とする秒数を指定', type = int, default = 1)
+@click.option('--force', is_flag = True, help = "ダウンロードディレクトリにMP4やMP3が存在する場合に未確認で上書きします")
+def main(youtube_id, debug, convert_mp3, thumb_second, force):
+
+    # ログファイル
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+    logzero.logfile(LOG_FILE, encoding = "utf-8")
+    logzero.loglevel(logging.INFO)
+
+    if debug:
+        logzero.loglevel(logging.DEBUG)
+        logger.debug("youtube_id:{0}".format(youtube_id))
+
+    # ffmpegコマンドのチェック
+    if convert_mp3:
+        check_ffmpeg()
 
     download_flag = True
-    if not force and youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp4'):
+    if not force and is_exist_movie(youtube_id):
         print('入力した動画IDの動画は既にダウンロード済みのようです。再度ダウンロードしますか？[y/N]')
         if input() not in ['Y', 'y']:
             download_flag = False
@@ -115,17 +159,17 @@ def main(youtube_id, debug, convert_mp3, thumb_second, force):
     if download_flag:
         download_result, stream_title = download_youtube_movie(youtube_id)
         if not download_result:
+            logger.error('動画のダウンロードに失敗したためプログラムを終了します。')
             sys.exit(1)
 
         # jsonにダウンロード情報を記録
-        downloaded_dict[youtube_id] = stream_title
-        json.dump(downloaded_dict, open(DOWNLOADED_LOG_FILE, 'w'), indent=4)
+        add_download_history(youtube_id, stream_title)
     else:
         # jsonから動画のタイトルを取得
-        stream_title = downloaded_dict[youtube_id]
+        stream_title = get_stream_title_by_download_history(youtube_id)
 
     if convert_mp3:
-        if not force and youtube_id in downloaded_dict and os.path.exists(DOWNLOAD_DIR + downloaded_dict[youtube_id] + '.mp3'):
+        if not force and is_exist_mp3(youtube_id):
             print('ダウンロードした動画に対応するMP3が既に存在します。再度作成しますか？[y/N]')
             if input() not in ['Y', 'y']:
                 logger.info("MP3の作成をやめたためプログラムを終了します。")
