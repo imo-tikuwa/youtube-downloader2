@@ -15,6 +15,7 @@ app.py -yid [youtube id] --debug --convert-mp3 --thumb-second 60
 | --debug | デバッグログを出力します。 |
 | --convert-mp3 | ダウンロードした動画をMP3に変換します。要ffmpeg |
 | --thumb-second | 初期値：1<br>数値のみ指定可能<br>動画から取得するサムネイルの秒数を指定します。<br>取得したサムネイルはMP3のID3タグに埋め込むアルバムアートに使用されます。 |
+| --force | ダウンロードディレクトリにMP4やMP3が存在する場合に未確認で上書きします |
 
 
 ## メモ
