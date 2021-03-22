@@ -35,7 +35,9 @@ if config.has_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR) and not os.path.
     config.remove_option(CONFIG_DEFAULT_SECTION, CONFIG_FFMPEG_DIR)
     config.write(open(CONFIG_FILE_NAME, 'w'))
 
-# ダウンロード済みファイルの辞書がなければ作成
+# ダウンロード済みファイルを格納するディレクトリと辞書がなければ作成
+if not os.path.exists(DOWNLOAD_DIR):
+    os.mkdir(DOWNLOAD_DIR)
 if not os.path.exists(DOWNLOADED_LOG_FILE):
     json.dump({}, open(DOWNLOADED_LOG_FILE, 'w'), indent=4)
 
