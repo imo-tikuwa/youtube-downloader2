@@ -5,6 +5,7 @@ import logzero
 from logzero import logger
 import click
 from pytube import YouTube
+from pytube.exceptions import RegexMatchError
 import os
 import ffmpeg
 import re
@@ -45,8 +46,9 @@ def download_youtube_movie(youtube_id):
     """
     try:
         yt = YouTube('https://www.youtube.com/watch?v=' + youtube_id)
-    except:
-        logger.error("指定のIDの動画は見つかりませんでした")
+    except RegexMatchError as e:
+        logger.error(e)
+        logger.error("指定のIDの動画は見つかりませんでした。動画ID：{0}".format(youtube_id))
         return False, None
 
     # 解像度の高い順でStreamを取得
