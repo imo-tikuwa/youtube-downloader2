@@ -15,7 +15,7 @@ import configparser
 import tkinter, tkinter.filedialog
 import json
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.abspath(os.curdir)
 DOWNLOAD_DIR = BASE_DIR + os.sep + 'downloaded' + os.sep
 DOWNLOADED_LOG_FILE = DOWNLOAD_DIR + '.json'
 LOG_DIR = BASE_DIR + os.sep + 'log' + os.sep
