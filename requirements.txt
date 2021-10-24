@@ -9,6 +9,6 @@ future==0.18.2
 logzero==1.5.0
 packaging==20.3
 pyparsing==2.4.7
-pytube==10.6.0
+pytube==11.0.1
 six==1.14.0
 typing-extensions==3.7.4.2

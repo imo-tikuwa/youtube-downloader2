@@ -60,7 +60,7 @@ def download_youtube_movie(youtube_id):
         return False, None
 
     logger.info("動画が見つかりました。タイトル：{0}".format(stream.title))
-    stream.download(DOWNLOAD_DIR, stream.title)
+    stream.download(DOWNLOAD_DIR, stream.title + '.' + stream.subtype)
     logger.info("動画の保存に成功しました。")
     # ファイル名として使えない文字を除いた文字列を作成
     stream_title = re.sub(r'[\\/:*?"<>|~.]+', '', stream.title)
